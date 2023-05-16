@@ -17,12 +17,11 @@ labels.forEach((label) => {
         targetBranches.push(targetBranch);
     }
 });
-
 // Cherry-pick and create pull requests for each target branch
 targetBranches.forEach(async (branch) => {
     try {
         console.log(`Creating cherry-pick commit to ${branch}`);
-        const { data: commit } = await octokit.git.createCommit({
+        const { data: commit } = await octokit.rest.git.createCommit({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             message: `Cherry-pick ${pr.number} to ${branch}`,
@@ -31,13 +30,13 @@ targetBranches.forEach(async (branch) => {
         });
 
         console.log(`Creating pull request to ${branch}`);
-        const originalPR = await octokit.pulls.get({
+        const originalPR = await octokit.rest.pulls.get({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             pull_number: pr.number,
         });
 
-        await octokit.pulls.create({
+        await octokit.rest.pulls.create({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             title: originalPR.data.title,

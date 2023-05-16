@@ -69,3 +69,6 @@ async function run() {
         console.error(error);
     }
 }
+
+
+run();

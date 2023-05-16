@@ -1,5 +1,9 @@
 name: 'Cherry pick to stable branch'
 description: 'Cherry pick latest PR to stable branch'
+inputs:
+  github-token:
+    description: 'Github token'
+    required: true
 runs:
   using: 'node16'
   main: 'index.js'

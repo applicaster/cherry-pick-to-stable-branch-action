@@ -22,11 +22,13 @@ async function run() {
 
         for (const branch of targetBranches) {
             try {
-                console.log(`Creating new branch ${branch}-cherry-pick`);
+                const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
+
+                console.log(`Creating new branch ${uniqueBranchName}`);
                 const newBranchRef = await octokit.rest.git.createRef({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
-                    ref: `refs/heads/${branch}-cherry-pick`,
+                    ref: `refs/heads/${uniqueBranchName}`,
                     sha: pr.head.sha,
                 });
 
@@ -37,7 +39,7 @@ async function run() {
                     commit_sha: pr.head.sha,
                 });
 
-                console.log(`Cherry-picking commit onto ${branch}-cherry-pick`);
+                console.log(`Cherry-picking commit onto ${uniqueBranchName}`);
                 await octokit.rest.git.createCommit({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,

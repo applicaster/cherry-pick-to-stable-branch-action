@@ -30,13 +30,20 @@ async function run() {
                     sha: pr.head.sha,
                 });
 
+                console.log(`Getting tree SHA for ${pr.head.sha}`);
+                const { data: commit } = await octokit.rest.git.getCommit({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    commit_sha: pr.head.sha,
+                });
+
                 console.log(`Cherry-picking commit onto ${branch}-cherry-pick`);
                 await octokit.rest.git.createCommit({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
                     message: `Cherry-pick ${pr.number} to ${branch}`,
                     parents: [newBranchRef.data.object.sha],
-                    tree: pr.head.sha,
+                    tree: commit.tree.sha,
                 });
 
                 console.log(`Creating pull request to ${branch}`);

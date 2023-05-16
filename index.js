@@ -8,6 +8,8 @@ const pr = github.context.payload.pull_request;
 const labels = pr.labels.map((label) => label.name);
 let targetBranches = [];
 
+console.log("pr", pr)
+
 // Extract version number from labels and construct target branches
 labels.forEach((label) => {
     const versionMatch = label.match(/^v(\d+)$/);
@@ -17,10 +19,17 @@ labels.forEach((label) => {
         targetBranches.push(targetBranch);
     }
 });
+
+console.log("labels", labels)
 // Cherry-pick and create pull requests for each target branch
 targetBranches.forEach(async (branch) => {
     try {
         console.log(`Creating cherry-pick commit to ${branch}`);
+        console.log({            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            message: `Cherry-pick ${pr.number} to ${branch}`,
+            parents: [pr.merge_commit_sha],
+            tree: pr.head.sha,})
         const { data: commit } = await octokit.rest.git.createCommit({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,

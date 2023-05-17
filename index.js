@@ -47,7 +47,6 @@ async function run() {
                     commit_sha: pr.merge_commit_sha,
                 });
 
-                console.log("commit", commit, commit.tree.sha)
 
                 console.log(`Cherry-picking commit onto ${uniqueBranchName}`);
                 await octokit.rest.git.createCommit({
@@ -55,8 +54,7 @@ async function run() {
                     repo: github.context.repo.repo,
                     message: `Cherry-pick ${pr.number} to ${branch}`,
                     parents: [newBranchRef.data.object.sha],
-                    // tree: commit.tree.sha,
-                    tree: pr.merge_commit_sha,
+                    tree: commit.tree.sha,
                 });
 
                 console.log(`Creating pull request to ${branch}`);

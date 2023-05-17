@@ -67,7 +67,7 @@ async function run() {
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
                     title: originalPR.data.title,
-                    head: `${github.context.repo.owner}:${branch}-cherry-pick`,
+                    head: `${github.context.repo.owner}:${uniqueBranchName}`,
                     base: branch,
                 });
 

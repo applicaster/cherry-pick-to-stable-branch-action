@@ -24,12 +24,20 @@ async function run() {
             try {
                 const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
 
+                const releaseBranchInfo = await octokit.rest.repos.getBranch({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    branch,
+                });
+
+                const releaseBranchInfoCommitSHA = releaseBranchInfo.data.commit.sha;
+
                 console.log(`Creating new branch ${uniqueBranchName}`);
                 const newBranchRef = await octokit.rest.git.createRef({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
                     ref: `refs/heads/${uniqueBranchName}`,
-                    sha: pr.head.sha,
+                    sha: releaseBranchInfoCommitSHA,
                 });
 
                 console.log(`Getting tree SHA for ${pr.head.sha}`);

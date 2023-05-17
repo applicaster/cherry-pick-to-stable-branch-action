@@ -40,11 +40,11 @@ async function run() {
                     sha: releaseBranchInfoCommitSHA,
                 });
 
-                console.log(`Getting tree SHA for ${pr.head.sha}`);
+                console.log(`Getting tree SHA for ${pr.merge_commit_sha}`);
                 const { data: commit } = await octokit.rest.git.getCommit({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
-                    commit_sha: pr.head.sha,
+                    commit_sha: pr.merge_commit_sha,
                 });
 
                 console.log(`Cherry-picking commit onto ${uniqueBranchName}`);

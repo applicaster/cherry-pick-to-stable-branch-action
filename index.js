@@ -8,6 +8,14 @@ async function run() {
     const octokit = github.getOctokit(token);
 
     const pr = github.context.payload.pull_request;
+
+    const prTargetBranch = pr.base.ref.replace('refs/heads/', '');
+
+    // run the script only on main branch
+    if(prTargetBranch !== 'main') {
+      return;
+    }
+
     const labels = pr.labels.map((label) => label.name);
     let targetBranches = [];
 

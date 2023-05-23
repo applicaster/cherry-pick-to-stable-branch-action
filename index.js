@@ -13,6 +13,7 @@ async function run() {
 
     // run the script only on main branch
     if(prTargetBranch !== 'main') {
+      console.log("Skipping for not-main branches");
       return;
     }
 
@@ -70,11 +71,15 @@ async function run() {
       } catch (error) {
         console.error(`Error occurred while cherry-picking and creating pull request for ${branch}`);
         console.error(error);
+        core.setFailed(error.message); // Set failure status
+
       }
     }
   } catch (error) {
     console.error("An error occurred:");
     console.error(error);
+    core.setFailed(error.message); // Set failure status
+
   }
 }
 

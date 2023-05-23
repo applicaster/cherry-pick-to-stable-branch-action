@@ -1,92 +1,71 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const exec = require('@actions/exec');
 
 async function run() {
-    try {
-        const token = core.getInput("github-token");
-        const octokit = github.getOctokit(token);
+  try {
+    const token = core.getInput("github-token");
+    const octokit = github.getOctokit(token);
 
-        const pr = github.context.payload.pull_request;
-        const labels = pr.labels.map((label) => label.name);
-        let targetBranches = [];
+    const pr = github.context.payload.pull_request;
+    const labels = pr.labels.map((label) => label.name);
+    let targetBranches = [];
 
-        // Extract version number from labels and construct target branches
-        labels.forEach((label) => {
-            const versionMatch = label.match(/^v(\d+)$/);
-            if (versionMatch) {
-                const versionNumber = versionMatch[1];
-                const targetBranch = `release/version-${versionNumber}`;
-                targetBranches.push(targetBranch);
-            }
-        });
+    // Extract version number from labels and construct target branches
+    labels.forEach((label) => {
+      const versionMatch = label.match(/^v(\d+)$/);
+      if (versionMatch) {
+        const versionNumber = versionMatch[1];
+        const targetBranch = `release/version-${versionNumber}`;
+        targetBranches.push(targetBranch);
+      }
+    });
 
-        for (const branch of targetBranches) {
-            try {
-                const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
+    for (const branch of targetBranches) {
+      try {
+        const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
 
-                const releaseBranchInfo = await octokit.rest.repos.getBranch({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    branch,
-                });
+        await exec.exec('git', ['checkout', branch]);
+        await exec.exec('git', ['checkout', '-b', uniqueBranchName]);
+        await exec.exec('git', ['cherry-pick', pr.merge_commit_sha]);
 
-                const releaseBranchInfoCommitSHA = releaseBranchInfo.data.commit.sha;
+        let hasConflicts = false;
+        const options = {
+          listeners: {
+            stderr: (data) => {
+              if (data.includes('CONFLICT')) {
+                hasConflicts = true;
+              }
+            },
+          },
+        };
 
-                console.log(`Creating new branch ${uniqueBranchName}`);
-                const newBranchRef = await octokit.rest.git.createRef({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    ref: `refs/heads/${uniqueBranchName}`,
-                    sha: releaseBranchInfoCommitSHA,
-                });
+        await exec.exec('git', ['diff', '--check'], options);
 
-                console.log(`Getting tree SHA for ${pr.merge_commit_sha}`);
-                const { data: commit } = await octokit.rest.git.getCommit({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    commit_sha: pr.merge_commit_sha,
-                });
+        if (hasConflicts) {
+          console.log(`Conflicts detected for ${pr.merge_commit_sha}. Cherry-pick aborted.`);
+        } else {
+          await exec.exec('git', ['push', 'origin', uniqueBranchName]);
 
+          await octokit.rest.pulls.create({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            title: pr.title,
+            head: `${github.context.repo.owner}:${uniqueBranchName}`,
+            base: branch,
+          });
 
-                console.log(`Cherry-picking commit onto ${uniqueBranchName}`);
-                await octokit.rest.git.createCommit({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    message: `Cherry-pick ${pr.number} to ${branch}`,
-                    parents: [newBranchRef.data.object.sha],
-                    tree: commit.tree.sha,
-                });
-
-                console.log(`Creating pull request to ${branch}`);
-                const originalPR = await octokit.rest.pulls.get({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    pull_number: pr.number,
-                });
-
-                await octokit.rest.pulls.create({
-                    owner: github.context.repo.owner,
-                    repo: github.context.repo.repo,
-                    title: originalPR.data.title,
-                    head: `${github.context.repo.owner}:${uniqueBranchName}`,
-                    base: branch,
-                });
-
-                console.log(
-                    `Cherry-pick and pull request creation for ${branch} completed successfully`
-                );
-            } catch (error) {
-                console.error(
-                    `Error occurred while cherry-picking and creating pull request for ${branch}`
-                );
-                console.error(error);
-            }
+          console.log(`Cherry-pick and pull request creation for ${branch} completed successfully`);
         }
-    } catch (error) {
-        console.error("An error occurred:");
+      } catch (error) {
+        console.error(`Error occurred while cherry-picking and creating pull request for ${branch}`);
         console.error(error);
+      }
     }
+  } catch (error) {
+    console.error("An error occurred:");
+    console.error(error);
+  }
 }
-
 
 run();

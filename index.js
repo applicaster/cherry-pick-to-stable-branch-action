@@ -38,8 +38,8 @@ async function run() {
         await exec.exec('git', ['checkout', branch]);
         await exec.exec('git', ['pull', 'origin', branch]); // Fetch the target branch from the remote repository
         await exec.exec('git', ['checkout', '-b', uniqueBranchName]);
+        await exec.exec('git', ['log', '--oneline', '--decorate', '--graph', '--all']);
         await exec.exec('git', ['cherry-pick', pr.merge_commit_sha]);
-
         let hasConflicts = false;
         const options = {
           listeners: {

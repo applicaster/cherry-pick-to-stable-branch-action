@@ -35,6 +35,7 @@ async function run() {
         const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
 
         await exec.exec('git', ['fetch', 'origin',  branch]);
+        await exec.exec('git', ['fetch', 'origin',  'main']);
         await exec.exec('git', ['checkout', branch]);
         await exec.exec('git', ['pull', 'origin', branch]); // Fetch the target branch from the remote repository
         await exec.exec('git', ['checkout', '-b', uniqueBranchName]);

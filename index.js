@@ -2,6 +2,10 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const exec = require('@actions/exec');
 
+const gitExecution = async (commands) => {
+  return exec.exec('git', commands);
+}
+
 async function run() {
   try {
     const token = core.getInput("github-token");
@@ -12,7 +16,7 @@ async function run() {
     const prTargetBranch = pr.base.ref.replace('refs/heads/', '');
 
     // run the script only on main branch
-    if(prTargetBranch !== 'main') {
+    if (prTargetBranch !== 'main') {
       console.log("Skipping for not-main branches");
       return;
     }
@@ -34,15 +38,40 @@ async function run() {
       try {
         const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
 
-        await exec.exec('git', ['fetch', 'origin',  branch]);
-        await exec.exec('git', ['fetch', 'origin',  'main']);
-        await exec.exec('git', ['log', '--oneline', '--decorate', '--graph', '-10']);
-        await exec.exec('git', ['checkout', branch]);
-        await exec.exec('git', ['pull', 'origin', branch]); // Fetch the target branch from the remote repository
-        await exec.exec('git', ['checkout', '-b', uniqueBranchName]);
-        await exec.exec('git', ['log', '--oneline', '--decorate', '--graph', '-10']);
-        await exec.exec('git', ['cherry-pick', pr.merge_commit_sha]);
+        // Update  branechs
+        core.startGroup('Fetch all branches')
+        await gitExecution(['remote', 'update'])
+        await gitExecution(['fetch', '--all'])
+        core.endGroup()
+
+        // Create branch new branch
+        core.startGroup(`Create new branch ${uniqueBranchName} from ${branch}`)
+        await gitExecution(['checkout', '-b', uniqueBranchName, `origin/${branch}`])
+        core.endGroup()
+
+        // Cherry pick
+        core.startGroup('Cherry picking')
+        const result = await gitExecution([
+          'cherry-pick',
+          '-m',
+          '1',
+          '--strategy=recursive',
+          '--strategy-option=theirs',
+          `${pr.merge_commit_sha}`
+        ])
+
+        if (result.exitCode !== 0 && !result.stderr.includes(CHERRYPICK_EMPTY)) {
+          throw new Error(`Unexpected error: ${result.stderr}`)
+        }
+        core.endGroup()
+
+        // Push new branch
+        core.startGroup('Push new branch to remote')
+        await gitExecution(['push', '-u', 'origin', `${uniqueBranchName}`])
+        core.endGroup()
+
         let hasConflicts = false;
+
         const options = {
           listeners: {
             stderr: (data) => {

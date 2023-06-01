@@ -78,9 +78,6 @@ async function run() {
           `${pr.merge_commit_sha}`
         ])
 
-        if (result.exitCode !== 0 && !result.stderr.includes(CHERRYPICK_EMPTY)) {
-          throw new Error(`Unexpected error: ${result.stderr}`)
-        }
         core.endGroup()
 
         let hasConflicts = false;

@@ -2,8 +2,8 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const exec = require('@actions/exec');
 
-const gitExecution = async (commands) => {
-  return exec.exec('git', commands);
+const gitExecution = async (commands, options) => {
+  return exec.exec('git', commands, options);
 }
 
 async function run() {
@@ -12,14 +12,17 @@ async function run() {
     const octokit = github.getOctokit(token);
 
     const pr = github.context.payload.pull_request;
+    const prAuthor = pr.user;
 
     const prTargetBranch = pr.base.ref.replace('refs/heads/', '');
+
 
     // run the script only on main branch
     if (prTargetBranch !== 'main') {
       console.log("Skipping for not-main branches");
       return;
     }
+
 
     const labels = pr.labels.map((label) => label.name);
     let targetBranches = [];
@@ -33,6 +36,21 @@ async function run() {
         targetBranches.push(targetBranch);
       }
     });
+
+
+    // Configure the committer and author
+    core.startGroup('Configuring the committer and author')
+    core.info(
+      `Configured git committer as '${prAuthor.name} <${prAuthor.email}>'`
+    )
+    await gitExecution(['config', '--global', 'user.name', prAuthor.name])
+    await gitExecution([
+      'config',
+      '--global',
+      'user.email',
+      prAuthor.email
+    ])
+    core.endGroup()
 
     for (const branch of targetBranches) {
       try {
@@ -65,11 +83,6 @@ async function run() {
         }
         core.endGroup()
 
-        // Push new branch
-        core.startGroup('Push new branch to remote')
-        await gitExecution(['push', '-u', 'origin', `${uniqueBranchName}`])
-        core.endGroup()
-
         let hasConflicts = false;
 
         const options = {
@@ -82,12 +95,18 @@ async function run() {
           },
         };
 
-        await exec.exec('git', ['diff', '--check'], options);
+        await gitExecution(['diff', '--check'], options);
 
         if (hasConflicts) {
           console.log(`Conflicts detected for ${pr.merge_commit_sha}. Cherry-pick aborted.`);
         } else {
-          await exec.exec('git', ['push', 'origin', uniqueBranchName]);
+
+          // Push new branch
+          core.startGroup('Push new branch to remote')
+          await gitExecution(['push', '-u', 'origin', `${uniqueBranchName}`])
+          core.endGroup()
+
+          core.startGroup('Create pull request')
 
           await octokit.rest.pulls.create({
             owner: github.context.repo.owner,
@@ -96,6 +115,8 @@ async function run() {
             head: `${github.context.repo.owner}:${uniqueBranchName}`,
             base: branch,
           });
+
+          core.endGroup()
 
           console.log(`Cherry-pick and pull request creation for ${branch} completed successfully`);
         }

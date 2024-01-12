@@ -29,7 +29,7 @@ async function run() {
 
     // Extract version number from labels and construct target branches
     labels.forEach((label) => {
-      const versionMatch = label.match(/^v(\d+)$/);
+      const versionMatch = label.match(/^v(\d+(\.\d+){0,2})$/);
       if (versionMatch) {
         const versionNumber = versionMatch[1];
         const targetBranch = `release/version-${versionNumber}`;

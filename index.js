@@ -9,6 +9,7 @@ const gitExecution = async (commands, options) => {
 async function run() {
   try {
     const token = core.getInput("github-token");
+    console.log("Printing the token: ", token);
     const octokit = github.getOctokit(token);
 
     const pr = github.context.payload.pull_request;

@@ -12,7 +12,10 @@ async function run() {
     const octokit = github.getOctokit(token);
 
     const pr = github.context.payload.pull_request;
-    const prAuthor = pr.user;
+    const username = pr.user.login;
+    const { data: user } = await octokit.rest.users.getByUsername({ username });
+    const email = user.email || username+"@users.noreply.github.com";
+    const prAuthor = { "name": user.name || username, "email": email };
 
     const prTargetBranch = pr.base.ref.replace('refs/heads/', '');
 

@@ -57,7 +57,7 @@ async function run() {
 
     for (const branch of targetBranches) {
       try {
-        const uniqueBranchName = `${branch}/cherry-pick-${Date.now()}`;
+        const uniqueBranchName = `${branch}-cherry-pick-${Date.now()}`;
 
         // Update  branechs
         core.startGroup('Fetch all branches')
